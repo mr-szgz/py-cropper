@@ -58,3 +58,6 @@ Optional switches:
 - `--executable PATH` – run a custom `cropper` executable/script when the verb fires (defaults to the current `cropper` command).
 
 If the verb ever breaks because the executable moved, re-run `cropper context-menu install --executable <new-path>` or uninstall/reinstall the package to refresh the registry keys.
+
+> [!WARNING]
+> This package was primarily developed with AI assistants: GPT-5, GPT-5-Codex, GPT-5.1, and GPT-5.1-Codex. Reasoning mode stays on Medium by default—High reasoning has consistently produced worse outcomes for this workflow.
