@@ -22,21 +22,21 @@ The installer registers a `cropper` console entry point. On Windows it will also
 ## Usage
 ```powershell
 # Crop a single file (writes <name>-cropped.<ext> by default)
-cropper crop example.png
+cropper example.png
 
 # Force the output path
-cropper crop example.png --output clean.png
+cropper example.png --output clean.png
 
 # Process several files and log errors individually
-cropper crop image1.jpg image2.jpg
+cropper image1.jpg image2.jpg
 
 # Process every supported image located next to <seed>.png
-cropper crop seed.png --include-siblings
+cropper seed.png --include-siblings
 
 # Keep more of the light border by increasing tolerance (0-255)
-cropper crop scan.png --tolerance 230
+cropper scan.png --tolerance 230
 ```
-CLI help is always available with `cropper --help` or `cropper crop --help`.
+CLI help is always available with `cropper --help` or `cropper --help`.
 
 ## Uninstall
 ```powershell
