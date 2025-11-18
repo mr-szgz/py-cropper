@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Tuple
 
@@ -77,13 +78,13 @@ def _list_image_files(directory: Path) -> list[Path]:
 
 @app.command("crop")
 def crop_command(
-    source: Path = typer.Argument(
+    sources: list[Path] = typer.Argument(
         ...,
         exists=True,
         dir_okay=False,
         readable=True,
         resolve_path=True,
-        help="Input image file.",
+        help="Input image file(s).",
     ),
     include_siblings: bool = typer.Option(
         False,
@@ -113,8 +114,13 @@ def crop_command(
 ) -> None:
     if include_siblings and output is not None:
         raise typer.BadParameter("--output cannot be used together with --include-siblings.")
+    if len(sources) > 1 and output is not None:
+        raise typer.BadParameter("--output can only be used when a single source is provided.")
 
     if include_siblings:
+        if len(sources) != 1:
+            raise typer.BadParameter("--include-siblings requires exactly one source.")
+        source = sources[0]
         images = _list_image_files(source.parent)
         if not images:
             typer.echo(f"No supported images found in {source.parent}")
@@ -131,11 +137,72 @@ def crop_command(
                     typer.echo(f"Wrote {written}")
         return
 
-    written = auto_crop(source, output, tolerance)
-    if written is None:
-        typer.echo("No borders detected; nothing written.")
-    else:
-        typer.echo(f"Cropped image written to {written}")
+    if len(sources) == 1:
+        written = auto_crop(sources[0], output, tolerance)
+        if written is None:
+            typer.echo("No borders detected; nothing written.")
+        else:
+            typer.echo(f"Cropped image written to {written}")
+        return
+
+    had_error = False
+    for path in sources:
+        try:
+            written = auto_crop(path, None, tolerance)
+        except Exception as exc:  # pragma: no cover - runtime feedback
+            typer.echo(f"[ERROR] {path.name}: {exc}")
+            had_error = True
+            continue
+
+        if written is None:
+            typer.echo(f"{path.name}: No borders detected; nothing written.")
+        else:
+            typer.echo(f"{path.name}: Cropped image written to {written}")
+
+    if had_error:
+        raise typer.Exit(code=1)
+
+
+@app.command("context-menu")
+def context_menu_command(
+    action: str = typer.Argument(
+        ...,
+        click_type=str,
+        metavar="install|remove",
+        help="Install or remove the Explorer context-menu entry.",
+    ),
+    executable: Path | None = typer.Option(
+        None,
+        "--executable",
+        "-e",
+        help="Path to cropper.exe/cropper script to invoke.",
+    ),
+) -> None:
+    if sys.platform != "win32":
+        typer.echo("Context-menu integration is only supported on Windows.")
+        raise typer.Exit(code=1)
+
+    try:
+        from context_menu import register_context_menu, unregister_context_menu
+    except ImportError:
+        typer.echo("context_menu helper is missing; reinstall the package.")
+        raise typer.Exit(code=1)
+
+    action_normalized = action.lower()
+    target = executable or Path(sys.argv[0]).resolve()
+
+    try:
+        if action_normalized == "install":
+            register_context_menu(target)
+            typer.echo("Context-menu entry installed.")
+        elif action_normalized == "remove":
+            unregister_context_menu()
+            typer.echo("Context-menu entry removed.")
+        else:
+            raise typer.BadParameter("Action must be 'install' or 'remove'.")
+    except Exception as exc:  # pragma: no cover - platform-specific
+        typer.echo(f"[ERROR] {exc}")
+        raise typer.Exit(code=1)
 
 
 def main() -> None:
