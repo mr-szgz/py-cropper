@@ -7,6 +7,9 @@ on:
         description: Release version (e.g. 0.1.1)
         required: true
         type: string
+  release:
+    types:
+      - published
 
 permissions:
   contents: write
@@ -21,16 +24,57 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate version input
+      - name: Resolve version
+        id: version
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          if [[ ! "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Version must look like 0.1.2" >&2
+          set -euo pipefail
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            candidate="$INPUT_VERSION"
+            source="workflow input"
+          else
+            candidate="$RELEASE_TAG"
+            source="release tag"
+          fi
+
+          if [[ -z "$candidate" ]]; then
+            echo "Version was not provided by the $source." >&2
             exit 1
           fi
 
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            if [[ ! "$candidate" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Version must look like 0.1.2" >&2
+              exit 1
+            fi
+            version="$candidate"
+            tag="v$version"
+          else
+            if [[ "$candidate" =~ ^v?([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+              version="${BASH_REMATCH[1]}"
+              if [[ "$candidate" == v* ]]; then
+                tag="$candidate"
+              else
+                tag="v$version"
+              fi
+            else
+              echo "Release tag '$candidate' does not look like v0.1.2" >&2
+              exit 1
+            fi
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
       - name: Update pyproject version
+        if: github.event_name == 'workflow_dispatch'
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           python - <<'PY'
           import os
@@ -49,32 +93,52 @@ jobs:
           PY
 
       - name: Configure Git user
+        if: github.event_name == 'workflow_dispatch'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Commit version bump
+        if: github.event_name == 'workflow_dispatch'
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           git commit -am "Release ${VERSION}"
 
       - name: Tag and push
+        if: github.event_name == 'workflow_dispatch'
         env:
-          VERSION: ${{ inputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          git tag "v${VERSION}"
+          git tag "${TAG}"
           git push origin HEAD
-          git push origin "v${VERSION}"
+          git push origin "${TAG}"
 
       - name: Create GitHub Release
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ inputs.version }}
-          release_name: py-cropper v${{ inputs.version }}
-          body: Automated release for version ${{ inputs.version }}.
+          tag_name: ${{ steps.version.outputs.tag }}
+          release_name: py-cropper v${{ steps.version.outputs.version }}
+          body: Automated release for version ${{ steps.version.outputs.version }}.
+
+      - name: Verify pyproject version matches release tag
+        if: github.event_name == 'release'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+
+          version = os.environ["VERSION"]
+          text = pathlib.Path("pyproject.toml").read_text()
+          expected = f'version = "{version}"'
+          if expected not in text:
+              raise SystemExit(f"pyproject.toml version does not match {version}")
+          PY
 
       - name: Set up Python
         uses: actions/setup-python@v5
