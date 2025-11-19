@@ -1,0 +1,5 @@
+1. C# .NET class library targeting `net8.0-windows` with `UseWindowsForms` enabled.
+2. Implement a COM-visible class with a GUID and `[ComVisible(true)]`.
+3. Implement `IContextMenu` and `IShellExtInit` via Vanara or SharpShell.
+4. Register the built DLL with `regsvr32` or via installer to add verbs under `HKCR\*\shellex\ContextMenuHandlers\<name>`.
+5. In `InvokeCommand`, run `"C:\Users\shoji\AppData\Local\mise\installs\python\3.10.16\Scripts\cropper.exe"` with selected file path.

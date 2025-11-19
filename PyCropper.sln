@@ -1,0 +1,29 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "dotnet", "dotnet", "{71E6E750-85FD-B5BC-4321-E01377EC6231}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CropperShellExtension", "dotnet\CropperShellExtension\CropperShellExtension.csproj", "{F55A1F68-47B8-19C5-F630-06FDB75AB8DD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F55A1F68-47B8-19C5-F630-06FDB75AB8DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F55A1F68-47B8-19C5-F630-06FDB75AB8DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F55A1F68-47B8-19C5-F630-06FDB75AB8DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F55A1F68-47B8-19C5-F630-06FDB75AB8DD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F55A1F68-47B8-19C5-F630-06FDB75AB8DD} = {71E6E750-85FD-B5BC-4321-E01377EC6231}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4F6D64DE-394D-4AB0-84CD-FD5BBC072617}
+	EndGlobalSection
+EndGlobal

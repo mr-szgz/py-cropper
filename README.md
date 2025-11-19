@@ -38,26 +38,25 @@ cropper scan.png --tolerance 230
 ```
 CLI help is always available with `cropper --help` or `cropper --help`.
 
-## Uninstall
+## Windows File Explorer Shell Extension
+
+### Building Extension
 ```powershell
-pip uninstall py-cropper
+cd .\dotnet\CropperShellExtension
+dotnet build
 ```
-Uninstalling removes the CLI entry point. If you previously added the Explorer verb, remove it manually (see below) before uninstalling or reinstall directly from source to re-register it.
 
-## Context Menu (Windows)
-Py-Cropper ships with helpers to create a `Crop with Py-Cropper` entry when you right-click an image in File Explorer.
+### Registering in Context Menu
+
+Run the helper from an elevated PowerShell prompt inside `dotnet/` (ensure `cropper.exe` is already on your `PATH`):
 
 ```powershell
-# Install the verb (requires existing cropper.exe/scripts entry)
-cropper context-menu install
-
-# Remove the verb
-cropper context-menu remove
+cd dotnet
+.\shell.ps1 -Action Register -Configuration Release
 ```
-Optional switches:
-- `--executable PATH` – run a custom `cropper` executable/script when the verb fires (defaults to the current `cropper` command).
 
-If the verb ever breaks because the executable moved, re-run `cropper context-menu install --executable <new-path>` or uninstall/reinstall the package to refresh the registry keys.
+This builds the COM host and wires up the Explorer verb. To remove it later run:
 
-> [!WARNING]
-> This package was primarily developed with AI assistants: GPT-5, GPT-5-Codex, GPT-5.1, and GPT-5.1-Codex. Reasoning mode stays on Medium by default—High reasoning has consistently produced worse outcomes for this workflow.
+```powershell
+.\shell.ps1 -Action Unregister
+```

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 from typing import Tuple
 
+from importlib import metadata
 import typer
 from PIL import Image, ImageOps
 
@@ -20,13 +22,57 @@ IMAGE_EXTENSIONS = {
 }
 
 
+def _read_local_version() -> str | None:
+    pyproject = Path(__file__).with_name("pyproject.toml")
+    if not pyproject.exists():
+        return None
+
+    inside_project = False
+    for raw_line in pyproject.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line == "[project]":
+            inside_project = True
+            continue
+        if inside_project and line.startswith("["):
+            break
+
+        if inside_project:
+            match = re.match(r'version\s*=\s*"([^"]+)"', line)
+            if match:
+                return match.group(1)
+    return None
+
+
+def _resolve_version() -> str:
+    for candidate in ("pycropper", "cropper"):
+        try:
+            return metadata.version(candidate)
+        except metadata.PackageNotFoundError:
+            continue
+    local = _read_local_version()
+    return local or "unknown"
+
+
+APP_VERSION = _resolve_version()
+
+
+def _version_callback(value: bool) -> None:
+    if not value:
+        return
+
+    typer.echo(f"pycropper {APP_VERSION}")
+    raise typer.Exit()
+
+
 def auto_crop(
     source: Path,
     destination: Path | None = None,
     tolerance: int = 5,
 ) -> Path | None:
     """
-    Remove white borders from ``source`` using Pillow's optimized helpers.
+    uninstall white borders from ``source`` using Pillow's optimized helpers.
 
     Args:
         source: Image file to crop.
@@ -76,8 +122,7 @@ def _list_image_files(directory: Path) -> list[Path]:
     )
 
 
-@app.command("crop")
-def crop_command(
+def _run_crop_cli(
     sources: list[Path] = typer.Argument(
         ...,
         exists=True,
@@ -163,50 +208,60 @@ def crop_command(
         raise typer.Exit(code=1)
 
 
-@app.command("context-menu")
-def context_menu_command(
-    action: str = typer.Argument(
-        ...,
-        click_type=str,
-        metavar="install|remove",
-        help="Install or remove the Explorer context-menu entry.",
+@app.command("crop")
+def crop_command(
+    _show_version: bool = typer.Option(
+        False,
+        "--version",
+        callback=_version_callback,
+        is_flag=True,
+        is_eager=True,
+        help="Show version and exit.",
     ),
-    executable: Path | None = typer.Option(
+    sources: list[Path] = typer.Argument(
+        ...,
+        exists=True,
+        dir_okay=False,
+        readable=True,
+        resolve_path=True,
+        help="Input image file(s).",
+    ),
+    include_siblings: bool = typer.Option(
+        False,
+        "--include-siblings",
+        "--siblings",
+        "-s",
+        is_flag=True,
+        help="Also process every supported image in the source folder.",
+    ),
+    output: Path | None = typer.Option(
         None,
-        "--executable",
-        "-e",
-        help="Path to cropper.exe/cropper script to invoke.",
+        "--output",
+        "-o",
+        dir_okay=False,
+        writable=True,
+        resolve_path=True,
+        help="Destination file. Defaults to <name>-cropped.<ext>.",
+    ),
+    tolerance: int = typer.Option(
+        200,
+        "--tolerance",
+        "-t",
+        min=0,
+        max=255,
+        help="Background tolerance (0-255). Higher tolerances keep more border.",
     ),
 ) -> None:
-    if sys.platform != "win32":
-        typer.echo("Context-menu integration is only supported on Windows.")
-        raise typer.Exit(code=1)
-
-    try:
-        from context_menu import register_context_menu, unregister_context_menu
-    except ImportError:
-        typer.echo("context_menu helper is missing; reinstall the package.")
-        raise typer.Exit(code=1)
-
-    action_normalized = action.lower()
-    target = executable or Path(sys.argv[0]).resolve()
-
-    try:
-        if action_normalized == "install":
-            register_context_menu(target)
-            typer.echo("Context-menu entry installed.")
-        elif action_normalized == "remove":
-            unregister_context_menu()
-            typer.echo("Context-menu entry removed.")
-        else:
-            raise typer.BadParameter("Action must be 'install' or 'remove'.")
-    except Exception as exc:  # pragma: no cover - platform-specific
-        typer.echo(f"[ERROR] {exc}")
-        raise typer.Exit(code=1)
+    _run_crop_cli(sources, include_siblings, output, tolerance)
 
 
-def main() -> None:
-    app()
+def main(argv: list[str] | None = None) -> None:
+    args = list(sys.argv[1:] if argv is None else argv)
+    if args and args[0] == "crop":
+        app()
+        return
+
+    typer.run(crop_command)
 
 
 if __name__ == "__main__":

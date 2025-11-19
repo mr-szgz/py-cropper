@@ -24,11 +24,10 @@ dependencies = [
     "typer",
 ]
 
-# TODO: add "pytest" to dev dependencies
-
 [project.optional-dependencies]
 dev = [
     "pytest",
+    "bump2version"
 ]
 
 [project.scripts]
@@ -40,3 +39,5 @@ Repository = "https://github.com/mr-szgz/py-cropper"
 
 [tool.setuptools]
 py-modules = ["cropper"]
+
+# TODO: add any idomatic or canonical configuration here for build steps or quality of life. minimalist as possible
