@@ -1,0 +1,13 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\*\shell\PyCropper]
+"MUIVerb"="PyCropper"
+"SubCommands"="{% for t in tolerances %}PyCropper.Tolerance{{ t }}{% if not loop.last %};{% endif %}{% endfor %}"
+
+{% for t in tolerances %}
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell\PyCropper.Tolerance{{ t }}]
+@="crop with {{ t }} tolerance"
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell\PyCropper.Tolerance{{ t }}\command]
+@="\"{{ cropper_path }}\" -t {{ t }} \"%1\""
+
+{% endfor %}

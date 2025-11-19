@@ -1,0 +1,60 @@
+PyCropper Executable/Icon Embedding Plan
+========================================
+
+Goal
+----
+Bundle brand assets directly inside `cropper.exe` so:
+1. The EXE shows the main PyCropper icon in Explorer.
+2. Additional logo/icon variants live inside the EXE and can be referenced via icon indexes (for registry verbs or other tooling).
+3. The raw `.ico` files are available at runtime so PyCropper can apply them to related assets on demand.
+
+Prep Work
+---------
+1. Convert every logo to a proper `.ico` that contains 16/24/32/48/64/128/256 px layers. Store them under `assets/icons/`.
+2. Decide which icon is the “main” face for the EXE (call it `assets/icons/cropper-main.ico`).
+
+Building cropper.exe with PyInstaller (or similar)
+--------------------------------------------------
+1. Use PyInstaller’s `--icon assets\\icons\\cropper-main.ico` flag (or set `icon='assets\\icons\\cropper-main.ico'` inside the `.spec` file’s `EXE(...)` section).
+2. Ship the remaining icons as data so the CLI can reach them later:
+   `--add-data "assets\\icons\\*.ico;icons"` (same rule applies to Nuitka/cx_Freeze via their data/asset options).
+3. Inside the code, load embedded data with `importlib.resources.files("pycropper").joinpath("icons/<name>.ico")` so it still works once frozen.
+
+Embedding multiple icon choices into the EXE resources
+------------------------------------------------------
+1. Create a resource script `icons.rc` similar to:
+
+   ```
+   IDI_MAIN ICON "assets\\icons\\cropper-main.ico"
+   IDI_ALT  ICON "assets\\icons\\cropper-alt.ico"
+   IDI_BLUE ICON "assets\\icons\\cropper-blue.ico"
+   ```
+
+2. Compile it with Visual Studio’s `rc.exe` (or `windres`) to produce `icons.res`:
+   `rc /fo icons.res icons.rc`
+3. When using a PyInstaller spec file, feed that compiled blob to the EXE:
+   ```
+   exe = EXE(
+       ...,
+       icon='assets\\icons\\cropper-main.ico',
+       other_resources=[(24, 1, open("icons.res", "rb").read())]  # 24 = RT_GROUP_ICON
+   )
+   ```
+   (If you prefer, run Resource Hacker or `rcedit.exe` as a post-build step to import `icons.res` into the finished EXE instead of modifying the spec.)
+
+Exposing the icons to Windows shell/registry
+--------------------------------------------
+1. After the EXE holds multiple icon groups, each is reachable by index: `cropper.exe,0`, `cropper.exe,1`, etc. (index order follows the resource order).
+2. Update `windows/PyCropperMenu.reg.jinja2` so the `Icon` value uses the right index, e.g. `"C:\\Path\\to\\cropper.exe,1"` for the alternate icon.
+3. Re-render/login the `.reg` template (`render_pycropper_menu_reg.py`) and re-import it so File Explorer verbs pick up the new icon.
+
+Letting PyCropper assign icons to other assets
+---------------------------------------------
+1. Because the `.ico` files are bundled as data (see “Building cropper.exe”), PyCropper can copy whichever icon the user selects to disk or set `IconResource` entries on `.lnk`/registry items.
+2. After programmatically changing icon associations, call `SHChangeNotify(SHCNE_ASSOCCHANGED, ...)` or prompt the user to restart Explorer so the new icon shows up immediately.
+
+Testing checklist
+-----------------
+1. Build `cropper.exe` with the spec changes and inspect it in Resource Hacker to confirm each icon group exists.
+2. Run the `windows/PyCropperMenu*.reg` scripts and check File Explorer’s context menu icons (they should match the index you set).
+3. Verify PyCropper can read the embedded `.ico` files at runtime via `importlib.resources`.

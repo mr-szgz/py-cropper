@@ -21,7 +21,8 @@ classifiers = [
 ]
 dependencies = [
     "Pillow",
-    "typer"
+    "typer",
+    "jinja2"
 ]
 
 [project.optional-dependencies]
