@@ -42,7 +42,6 @@ CLI help is always available with `cropper --help` or `cropper --help`.
 
 ### Building Extension
 ```powershell
-cd .\dotnet\CropperShellExtension
 dotnet build
 ```
 

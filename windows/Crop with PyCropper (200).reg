@@ -1,0 +1,6 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\*\shell\Crop with PyCropper (200)]
+
+[HKEY_CLASSES_ROOT\*\shell\Crop with PyCropper (200)\command]
+@="\"{{CROPPER_EXE}}\" \"-t 200\" \"%1\""
